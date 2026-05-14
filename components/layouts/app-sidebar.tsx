@@ -16,6 +16,8 @@ import {
   ChevronRight,
   Zap,
   LogOut,
+  Bell,
+  Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,13 +39,31 @@ const mobileNavItems = [
   { label: 'Plan', href: '/dashboard/plan', icon: Map },
 ];
 
+// Get the page title based on current path
+const getPageTitle = (pathname: string): string => {
+  const pathMap: Record<string, string> = {
+    '/dashboard': 'Dashboard',
+    '/dashboard/materials': 'My Materials',
+    '/dashboard/chat': 'AI Chat',
+    '/dashboard/quiz': 'Quiz',
+    '/dashboard/report': 'Knowledge Report',
+    '/dashboard/plan': 'Learning Plan',
+    '/dashboard/settings': 'Settings',
+  };
+  return pathMap[pathname] || 'Ilm AI';
+};
+
 interface AppSidebarProps {
   userName?: string;
+  currentStreak?: number;
 }
 
-export function AppSidebar({ userName = 'User' }: AppSidebarProps) {
+export function AppSidebar({ userName = 'User', currentStreak = 5 }: AppSidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [hasNotifications] = useState(true);
+
+  const pageTitle = getPageTitle(pathname);
 
   return (
     <>
@@ -154,9 +174,13 @@ export function AppSidebar({ userName = 'User' }: AppSidebarProps) {
               )}
             </AnimatePresence>
             {!isCollapsed && (
-              <button className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition-colors">
+              <Link 
+                href="/"
+                className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                title="Sign out"
+              >
                 <LogOut size={16} />
-              </button>
+              </Link>
             )}
           </div>
         </div>
@@ -168,12 +192,26 @@ export function AppSidebar({ userName = 'User' }: AppSidebarProps) {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
             <Zap className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-white">Ilm AI</span>
+          <span className="font-semibold text-white">{pageTitle}</span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* Streak indicator */}
+          <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/20 rounded-full mr-2">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <span className="text-xs font-semibold text-orange-400">{currentStreak}</span>
+          </div>
+          {/* Notification bell */}
+          <button
+            className="relative p-2 rounded-lg hover:bg-[#1F2937] text-gray-400 hover:text-white"
+          >
+            <Bell size={20} />
+            {hasNotifications && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-purple-500 rounded-full" />
+            )}
+          </button>
           <Link
             href="/dashboard/settings"
-            className="p-2 rounded-lg hover:bg-[#1F2937] text-gray-400"
+            className="p-2 rounded-lg hover:bg-[#1F2937] text-gray-400 hover:text-white"
           >
             <Settings size={20} />
           </Link>
@@ -181,7 +219,7 @@ export function AppSidebar({ userName = 'User' }: AppSidebarProps) {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-[#1F2937] flex items-center justify-around h-16 z-40">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-[#111827] border-t border-[#1F2937] flex items-center justify-around h-16 z-40 safe-area-inset-bottom">
         {mobileNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -191,7 +229,7 @@ export function AppSidebar({ userName = 'User' }: AppSidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 flex-1 h-full min-w-[64px] transition-colors',
+                'flex flex-col items-center justify-center gap-1 flex-1 h-full min-w-[64px] transition-colors py-2',
                 isActive ? 'text-purple-400' : 'text-gray-400'
               )}
             >

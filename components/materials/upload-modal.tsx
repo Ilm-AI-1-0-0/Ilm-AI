@@ -1,8 +1,34 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { X, Upload, Sparkles } from 'lucide-react';
-import { useConfetti } from '@/hooks/use-confetti';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { X, Upload, Sparkles, AlertCircle, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { toast } from 'sonner';
+
+// File validation constants
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+const uploadSchema = z.object({
+  topic: z
+    .string()
+    .min(2, 'Topic must be at least 2 characters')
+    .max(50, 'Topic is too long (max 50 characters)'),
+  description: z
+    .string()
+    .max(200, 'Description is too long (max 200 characters)')
+    .optional(),
+});
+
+type UploadFormData = z.infer<typeof uploadSchema>;
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -22,67 +48,104 @@ export default function UploadModal({
   onUpload,
 }: UploadModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('file');
-  const [topic, setTopic] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dragOverRef = useRef(false);
-  const { confetti, trigger } = useConfetti();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<UploadFormData>({
+    resolver: zodResolver(uploadSchema),
+  });
+
+  const validateFile = (selectedFile: File): string | null => {
+    // Check file type
+    const extension = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
+    const isValidType = ALLOWED_TYPES.includes(selectedFile.type) || 
+      ['.pdf', '.txt', '.doc', '.docx'].includes(extension);
+    
+    if (!isValidType) {
+      return 'Only PDF, Word, or text files are allowed';
+    }
+    
+    // Check file size
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      return 'File must be under 10MB';
+    }
+    
+    return null;
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    dragOverRef.current = true;
+    setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    dragOverRef.current = false;
+    setIsDragging(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    dragOverRef.current = false;
+    setIsDragging(false);
+    setFileError(null);
 
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles.length > 0) {
       const selectedFile = droppedFiles[0];
-      const validTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain',
-      ];
-
-      if (validTypes.includes(selectedFile.type)) {
-        setFile(selectedFile);
+      const error = validateFile(selectedFile);
+      
+      if (error) {
+        setFileError(error);
+        toast.error(error);
       } else {
-        alert('Please drop a valid file (PDF, Word, or Text)');
+        setFile(selectedFile);
       }
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      const error = validateFile(selectedFile);
+      
+      if (error) {
+        setFileError(error);
+        toast.error(error);
+        e.target.value = '';
+      } else {
+        setFile(selectedFile);
+      }
     }
   };
 
-  const handleSubmit = async () => {
-    if (!topic.trim()) {
-      alert('Please enter a topic');
-      return;
-    }
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#7C3AED', '#06B6D4', '#10B981'],
+    });
+  };
 
+  const onSubmit = async (data: UploadFormData) => {
     if (activeTab === 'file' && !file) {
-      alert('Please select a file');
+      toast.error('Please select a file');
       return;
     }
 
     if (activeTab === 'text' && !text.trim()) {
-      alert('Please paste some text');
+      toast.error('Please paste some text');
       return;
     }
 
@@ -104,68 +167,55 @@ export default function UploadModal({
       await onUpload({
         file: activeTab === 'file' ? file || undefined : undefined,
         text: activeTab === 'text' ? text : undefined,
-        topic,
+        topic: data.topic,
       });
 
       clearInterval(progressInterval);
       setUploadProgress(100);
 
       // Trigger confetti
-      trigger();
+      triggerConfetti();
       setIsSuccess(true);
 
       // Reset after success
       setTimeout(() => {
-        setIsSuccess(false);
-        setFile(null);
-        setText('');
-        setTopic('');
-        setUploadProgress(0);
+        handleReset();
         onClose();
       }, 2000);
     } catch (error) {
-      alert('Upload failed. Please try again.');
+      toast.error('Upload failed. Please try again.');
       setIsLoading(false);
       setUploadProgress(0);
     }
   };
 
+  const handleReset = () => {
+    setIsSuccess(false);
+    setFile(null);
+    setText('');
+    setUploadProgress(0);
+    setFileError(null);
+    setIsLoading(false);
+    reset();
+  };
+
   const handleClose = () => {
     if (!isLoading && !isSuccess) {
-      setFile(null);
-      setText('');
-      setTopic('');
-      setUploadProgress(0);
+      handleReset();
       onClose();
     }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Confetti */}
-      {confetti.map((conf) => (
-        <div
-          key={conf.id}
-          className="fixed pointer-events-none"
-          style={{
-            left: `${conf.left}%`,
-            top: '50%',
-            animation: `fall ${conf.duration}s linear ${conf.delay}s forwards`,
-          }}
-        >
-          <div
-            className="text-2xl animate-spin"
-            style={{
-              animation: `spin ${conf.duration}s linear ${conf.delay}s forwards`,
-            }}
-          >
-            ✨
-          </div>
-        </div>
-      ))}
-
       {/* Modal Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
@@ -193,11 +243,13 @@ export default function UploadModal({
             </button>
           </div>
 
-          <div className="p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6">
             {/* Success State */}
             {isSuccess && (
               <div className="text-center py-8">
-                <div className="text-5xl mb-4 animate-bounce">✅</div>
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-green-400" />
+                </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   Upload Successful!
                 </h3>
@@ -216,17 +268,51 @@ export default function UploadModal({
                   </label>
                   <input
                     type="text"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
+                    {...register('topic')}
                     placeholder="e.g., Cloud Architecture, Tax Law"
                     disabled={isLoading}
-                    className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                    className={`w-full px-4 py-2 bg-background border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 disabled:opacity-50 ${
+                      errors.topic 
+                        ? 'border-red-500 focus:ring-red-500/20' 
+                        : 'border-border focus:ring-primary/20'
+                    }`}
                   />
+                  {errors.topic && (
+                    <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.topic.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Description Input (Optional) */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Description <span className="text-muted-foreground">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    {...register('description')}
+                    placeholder="Brief description of the material"
+                    disabled={isLoading}
+                    className={`w-full px-4 py-2 bg-background border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 disabled:opacity-50 ${
+                      errors.description 
+                        ? 'border-red-500 focus:ring-red-500/20' 
+                        : 'border-border focus:ring-primary/20'
+                    }`}
+                  />
+                  {errors.description && (
+                    <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.description.message}
+                    </p>
+                  )}
                 </div>
 
                 {/* Tabs */}
                 <div className="flex gap-2 mb-6 border-b border-border">
                   <button
+                    type="button"
                     onClick={() => setActiveTab('file')}
                     disabled={isLoading}
                     className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 ${
@@ -238,6 +324,7 @@ export default function UploadModal({
                     Upload File
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveTab('text')}
                     disabled={isLoading}
                     className={`px-4 py-3 font-medium text-sm transition-colors border-b-2 ${
@@ -257,9 +344,12 @@ export default function UploadModal({
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                        dragOverRef.current
+                      onClick={() => !isLoading && fileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${
+                        isDragging
                           ? 'border-primary bg-primary/10'
+                          : fileError
+                          ? 'border-red-500/50 hover:border-red-500'
                           : 'border-border hover:border-primary/50'
                       }`}
                     >
@@ -268,10 +358,10 @@ export default function UploadModal({
                         Drag and drop your file
                       </p>
                       <p className="text-xs text-muted-foreground mb-4">
-                        PDF, Word, or Text files
+                        PDF, Word, or Text files (max 10MB)
                       </p>
                       <button
-                        onClick={() => fileInputRef.current?.click()}
+                        type="button"
                         disabled={isLoading}
                         className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
                       >
@@ -287,22 +377,33 @@ export default function UploadModal({
                       />
                     </div>
 
-                    {file && (
+                    {fileError && (
+                      <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {fileError}
+                      </p>
+                    )}
+
+                    {file && !fileError && (
                       <div className="mt-4 p-3 bg-background rounded-lg flex items-center justify-between">
-                        <div className="text-sm">
-                          <p className="font-medium text-foreground">
-                            {file.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <div className="text-sm">
+                            <p className="font-medium text-foreground truncate max-w-[200px]">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(file.size)}
+                            </p>
+                          </div>
                         </div>
                         <button
+                          type="button"
                           onClick={() => setFile(null)}
                           disabled={isLoading}
                           className="text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                         >
-                          ✕
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     )}
@@ -317,7 +418,7 @@ export default function UploadModal({
                       onChange={(e) => setText(e.target.value)}
                       placeholder="Paste your text content here..."
                       disabled={isLoading}
-                      className="w-full h-48 px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none disabled:opacity-50"
+                      className="w-full h-48 px-4 py-3 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none disabled:opacity-50"
                     />
                     <p className="text-xs text-muted-foreground mt-2">
                       {text.length} characters
@@ -347,14 +448,14 @@ export default function UploadModal({
 
                 {/* Submit Button */}
                 <button
-                  onClick={handleSubmit}
-                  disabled={isLoading || (!file && !text) || !topic}
+                  type="submit"
+                  disabled={isLoading || (!file && !text)}
                   className="w-full mt-6 px-4 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {isLoading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      Uploading
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Uploading...
                     </>
                   ) : (
                     <>
@@ -365,26 +466,9 @@ export default function UploadModal({
                 </button>
               </>
             )}
-          </div>
+          </form>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fall {
-          to {
-            transform: translateY(100vh) translateX(100px);
-            opacity: 0;
-          }
-        }
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
     </>
   );
 }

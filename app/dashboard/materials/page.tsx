@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import { Search, Plus } from 'lucide-react';
-import Sidebar from '@/components/dashboard/sidebar';
+import { AppLayout } from '@/components/layouts/app-layout';
 import MaterialCard from '@/components/materials/material-card';
 import UploadModal from '@/components/materials/upload-modal';
 import EmptyState from '@/components/materials/empty-state';
+import { toast } from 'sonner';
 
 interface Material {
   id: string;
@@ -90,18 +91,19 @@ export default function MaterialsPage() {
     };
 
     setMaterials((prev) => [newMaterial, ...prev]);
+    toast.success('Material uploaded successfully!');
   };
 
   const handleRename = (id: string, newName: string) => {
     setMaterials((prev) =>
       prev.map((m) => (m.id === id ? { ...m, title: newName } : m))
     );
+    toast.success('Material renamed');
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this material?')) {
-      setMaterials((prev) => prev.filter((m) => m.id !== id));
-    }
+    setMaterials((prev) => prev.filter((m) => m.id !== id));
+    toast.success('Material deleted');
   };
 
   const handleView = (id: string) => {
@@ -110,87 +112,84 @@ export default function MaterialsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar />
+    <AppLayout>
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 lg:pb-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">My Knowledge Base</h1>
+            <p className="text-gray-400 text-sm mt-1">Manage your uploaded learning materials</p>
+          </div>
+          <button
+            onClick={() => setIsUploadModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center sm:justify-start"
+          >
+            <Plus className="w-5 h-5" />
+            Upload Material
+          </button>
+        </div>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-            <h1 className="text-3xl font-bold text-foreground">My Knowledge Base</h1>
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search materials..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        {/* Topic Filters */}
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+          {allTopics.map((topic) => (
             <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors w-full sm:w-auto justify-center sm:justify-start"
+              key={topic}
+              onClick={() => setSelectedTopic(topic)}
+              className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-all ${
+                selectedTopic === topic
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card border border-border text-foreground hover:border-primary/50'
+              }`}
             >
-              <Plus className="w-5 h-5" />
-              Upload Material
+              {topic}
+            </button>
+          ))}
+        </div>
+
+        {/* Materials Grid or Empty State */}
+        {filteredMaterials.length === 0 && materials.length === 0 ? (
+          <EmptyState onUploadClick={() => setIsUploadModalOpen(true)} />
+        ) : filteredMaterials.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">
+              No materials found for &quot;{searchQuery}&quot; in {selectedTopic}
+            </p>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedTopic('All');
+              }}
+              className="mt-4 text-primary hover:underline text-sm font-medium"
+            >
+              Clear filters
             </button>
           </div>
-
-          {/* Search Bar */}
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search materials..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          {/* Topic Filters */}
-          <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-            {allTopics.map((topic) => (
-              <button
-                key={topic}
-                onClick={() => setSelectedTopic(topic)}
-                className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition-all ${
-                  selectedTopic === topic
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-card border border-border text-foreground hover:border-primary/50'
-                }`}
-              >
-                {topic}
-              </button>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredMaterials.map((material) => (
+              <MaterialCard
+                key={material.id}
+                {...material}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                onView={handleView}
+              />
             ))}
           </div>
-
-          {/* Materials Grid or Empty State */}
-          {filteredMaterials.length === 0 && materials.length === 0 ? (
-            <EmptyState onUploadClick={() => setIsUploadModalOpen(true)} />
-          ) : filteredMaterials.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                No materials found for "{searchQuery}" in {selectedTopic}
-              </p>
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedTopic('All');
-                }}
-                className="mt-4 text-primary hover:underline text-sm font-medium"
-              >
-                Clear filters
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredMaterials.map((material) => (
-                <MaterialCard
-                  key={material.id}
-                  {...material}
-                  onRename={handleRename}
-                  onDelete={handleDelete}
-                  onView={handleView}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+        )}
+      </div>
 
       {/* Upload Modal */}
       <UploadModal
@@ -198,6 +197,6 @@ export default function MaterialsPage() {
         onClose={() => setIsUploadModalOpen(false)}
         onUpload={handleUpload}
       />
-    </div>
+    </AppLayout>
   );
 }
