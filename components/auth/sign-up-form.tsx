@@ -1,81 +1,47 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, BookOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, BookOpen, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
-interface FormErrors {
-  name?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-  general?: string;
-}
+const signUpSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name is too long'),
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[0-9]/, 'Password must contain at least 1 number'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
+  learningGoal: z.string().max(200, 'Learning goal is too long').optional(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
+type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export default function SignUpForm() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [learningGoal, setLearningGoal] = useState('');
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: FormErrors = {};
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting, isSubmitSuccessful },
+    setError,
+  } = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+  });
 
-    if (!name.trim()) {
-      newErrors.name = 'Name is required';
-    } else if (name.length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
-    }
-
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Please enter a valid email';
-    }
-
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    } else if (!/[A-Z]/.test(password)) {
-      newErrors.password = 'Password must contain an uppercase letter';
-    } else if (!/[0-9]/.test(password)) {
-      newErrors.password = 'Password must contain a number';
-    }
-
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setSuccess(true);
-      setTimeout(() => {
-        // Redirect or handle success
-      }, 2000);
-    } catch (error) {
-      setErrors({ general: 'Sign up failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const password = watch('password', '');
+  const confirmPassword = watch('confirmPassword', '');
 
   const getPasswordStrength = () => {
     if (!password) return 0;
@@ -89,8 +55,26 @@ export default function SignUpForm() {
 
   const passwordStrength = getPasswordStrength();
 
+  const onSubmit = async (data: SignUpFormData) => {
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      toast.success('Account created successfully!');
+      router.push('/onboarding');
+    } catch (error) {
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 500);
+      setError('root', { message: 'Sign up failed. Please try again.' });
+      toast.error('Sign up failed. Please try again.');
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className={`space-y-4 ${isShaking ? 'animate-wrong-shake' : ''}`}
+    >
       {/* Name field */}
       <div>
         <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
@@ -98,11 +82,7 @@ export default function SignUpForm() {
           <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type="text"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (errors.name) setErrors({ ...errors, name: undefined });
-            }}
+            {...register('name')}
             placeholder="John Doe"
             className={`w-full pl-10 pr-4 py-2.5 bg-[#1F2937] border rounded-lg text-white placeholder-gray-500 transition-all duration-200 focus:outline-none ${
               errors.name
@@ -113,7 +93,7 @@ export default function SignUpForm() {
         </div>
         {errors.name && (
           <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" /> {errors.name}
+            <AlertCircle className="w-3 h-3" /> {errors.name.message}
           </p>
         )}
       </div>
@@ -125,11 +105,7 @@ export default function SignUpForm() {
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              if (errors.email) setErrors({ ...errors, email: undefined });
-            }}
+            {...register('email')}
             placeholder="you@example.com"
             className={`w-full pl-10 pr-4 py-2.5 bg-[#1F2937] border rounded-lg text-white placeholder-gray-500 transition-all duration-200 focus:outline-none ${
               errors.email
@@ -140,7 +116,7 @@ export default function SignUpForm() {
         </div>
         {errors.email && (
           <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" /> {errors.email}
+            <AlertCircle className="w-3 h-3" /> {errors.email.message}
           </p>
         )}
       </div>
@@ -152,12 +128,8 @@ export default function SignUpForm() {
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              if (errors.password) setErrors({ ...errors, password: undefined });
-            }}
-            placeholder="••••••••"
+            {...register('password')}
+            placeholder="Min 8 chars, 1 number"
             className={`w-full pl-10 pr-10 py-2.5 bg-[#1F2937] border rounded-lg text-white placeholder-gray-500 transition-all duration-200 focus:outline-none ${
               errors.password
                 ? 'border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
@@ -200,7 +172,7 @@ export default function SignUpForm() {
         )}
         {errors.password && (
           <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" /> {errors.password}
+            <AlertCircle className="w-3 h-3" /> {errors.password.message}
           </p>
         )}
       </div>
@@ -212,12 +184,8 @@ export default function SignUpForm() {
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type={showConfirmPassword ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: undefined });
-            }}
-            placeholder="••••••••"
+            {...register('confirmPassword')}
+            placeholder="Re-enter your password"
             className={`w-full pl-10 pr-10 py-2.5 bg-[#1F2937] border rounded-lg text-white placeholder-gray-500 transition-all duration-200 focus:outline-none ${
               errors.confirmPassword
                 ? 'border-red-500/50 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
@@ -241,21 +209,22 @@ export default function SignUpForm() {
         )}
         {errors.confirmPassword && (
           <p className="mt-1 text-xs text-red-400 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" /> {errors.confirmPassword}
+            <AlertCircle className="w-3 h-3" /> {errors.confirmPassword.message}
           </p>
         )}
       </div>
 
       {/* Learning goal field */}
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">What are you learning? (optional)</label>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          {"What are you learning? (optional)"}
+        </label>
         <div className="relative">
           <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type="text"
-            value={learningGoal}
-            onChange={(e) => setLearningGoal(e.target.value)}
-            placeholder="e.g., Python, Machine Learning, Biology"
+            {...register('learningGoal')}
+            placeholder="e.g., Python, Machine Learning"
             className="w-full pl-10 pr-4 py-2.5 bg-[#1F2937] border border-gray-600/30 rounded-lg text-white placeholder-gray-500 transition-all duration-200 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20"
           />
         </div>
@@ -263,37 +232,37 @@ export default function SignUpForm() {
       </div>
 
       {/* General error */}
-      {errors.general && (
+      {errors.root && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-300">{errors.general}</p>
+          <p className="text-sm text-red-300">{errors.root.message}</p>
         </div>
       )}
 
       {/* Success state */}
-      {success && (
+      {isSubmitSuccessful && (
         <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 flex items-start gap-3">
           <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-green-300">Account created successfully!</p>
+          <p className="text-sm text-green-300">Account created! Redirecting...</p>
         </div>
       )}
 
       {/* Submit button */}
       <button
         type="submit"
-        disabled={isLoading || success}
+        disabled={isSubmitting || isSubmitSuccessful}
         className={`w-full py-2.5 px-4 rounded-lg font-medium text-white text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
-          success
+          isSubmitSuccessful
             ? 'bg-green-600 hover:bg-green-700'
             : 'bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 active:scale-95'
         } disabled:opacity-70`}
       >
-        {isLoading ? (
+        {isSubmitting ? (
           <>
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <Loader2 className="w-4 h-4 animate-spin" />
             Creating account...
           </>
-        ) : success ? (
+        ) : isSubmitSuccessful ? (
           <>
             <CheckCircle className="w-4 h-4" />
             Account created
