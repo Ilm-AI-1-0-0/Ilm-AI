@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Clock, ArrowRight, Sparkles, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Clock, ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppLayout } from '@/components/layouts/app-layout';
 import KnowledgeDonutChart from '@/components/report/knowledge-donut-chart';
@@ -93,13 +93,6 @@ export default function ReportPage() {
     return (
       <AppLayout>
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 lg:py-8 pb-24 lg:pb-8">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </Link>
           <ReportEmptyState 
             sessionsCompleted={mockData.sessionsCompleted} 
             requiredSessions={mockData.requiredSessions} 
@@ -112,15 +105,6 @@ export default function ReportPage() {
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 lg:py-8 pb-24 lg:pb-8">
-        {/* Back link */}
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>

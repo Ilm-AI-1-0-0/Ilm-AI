@@ -2,10 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { ChartNoAxesCombined, ArrowLeft } from 'lucide-react';
+import { ChartNoAxesCombined } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/app-layout';
 import GoalBanner from '@/components/plan/goal-banner';
 import WeeklyCalendar from '@/components/plan/weekly-calendar';
@@ -201,15 +200,6 @@ export default function LearningPlanPage() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-24 lg:pb-8">
-        {/* Back link */}
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
         {/* Page Header */}
         <div className="flex items-center justify-between mb-6 lg:mb-8">
           <div>

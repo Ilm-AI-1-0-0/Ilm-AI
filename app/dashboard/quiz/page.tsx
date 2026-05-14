@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { AppLayout } from '@/components/layouts/app-layout';
@@ -337,15 +336,6 @@ export default function QuizPage() {
               >
                 <ArrowLeft size={20} />
               </Button>
-            )}
-            {quizState === 'setup' && (
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
-              >
-                <ArrowLeft size={16} />
-                Back to Dashboard
-              </Link>
             )}
           </div>
           <div>

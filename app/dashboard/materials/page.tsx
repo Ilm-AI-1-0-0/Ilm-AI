@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { Search, Plus, ArrowLeft } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/app-layout';
 import MaterialCard from '@/components/materials/material-card';
 import UploadModal from '@/components/materials/upload-modal';
@@ -115,15 +114,6 @@ export default function MaterialsPage() {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 pb-24 lg:pb-8">
-        {/* Back link */}
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </Link>
-
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
