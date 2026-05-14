@@ -9,7 +9,7 @@ import {
   Brain, 
   Map, 
   Settings,
-  Logo
+  BarChart3
 } from 'lucide-react';
 
 const navigationItems = [
@@ -17,6 +17,7 @@ const navigationItems = [
   { label: 'My Materials', href: '/dashboard/materials', icon: BookOpen },
   { label: 'Chat', href: '/dashboard/chat', icon: MessageCircle },
   { label: 'Quiz', href: '/dashboard/quiz', icon: Brain },
+  { label: 'Report', href: '/dashboard/report', icon: BarChart3 },
   { label: 'Learning Plan', href: '/dashboard/plan', icon: Map },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
