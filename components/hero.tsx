@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { ArrowRight, Play } from 'lucide-react'
 import { Button } from './ui/button'
 
@@ -28,12 +29,14 @@ export default function Hero() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-            <Button
-              size="lg"
-              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg h-12 px-8 w-full sm:w-auto"
-            >
-              Get Started Free <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
+            <Link href="/auth">
+              <Button
+                size="lg"
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg h-12 px-8 w-full sm:w-auto"
+              >
+                Get Started Free <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
             <Button
               size="lg"
               variant="outline"

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
+import { AuthLayout } from '@/components/layouts/auth-layout';
 import SignInForm from '@/components/auth/sign-in-form';
 import SignUpForm from '@/components/auth/sign-up-form';
 
@@ -9,15 +10,8 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A0F1E] via-[#0A0F1E] to-purple-900/20 flex items-center justify-center px-4 py-12">
-      {/* Background gradient elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-1/4 w-72 h-72 bg-violet-500/5 rounded-full blur-3xl"></div>
-      </div>
-
-      {/* Main card */}
-      <div className="w-full max-w-md relative z-10">
+    <AuthLayout>
+      <div className="w-full max-w-md">
         {/* Glass card */}
         <div className="glass-card p-8 md:p-10">
           {/* Header */}
@@ -104,7 +98,7 @@ export default function AuthPage() {
           <p className="text-center text-xs text-gray-500 mt-6">
             {activeTab === 'signin' ? (
               <>
-                Don&apos;t have an account?{' '}
+                {"Don't have an account? "}
                 <button
                   onClick={() => setActiveTab('signup')}
                   className="text-purple-400 hover:text-purple-300 font-medium transition-colors"
@@ -138,6 +132,6 @@ export default function AuthPage() {
           </button>
         </p>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

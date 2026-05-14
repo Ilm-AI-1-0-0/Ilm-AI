@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 import Step1LearningGoal from '@/components/onboarding/step-1-learning-goal';
 import Step2TargetDate from '@/components/onboarding/step-2-target-date';
 import Step3UploadMaterial from '@/components/onboarding/step-3-upload-material';
@@ -13,6 +15,7 @@ type OnboardingData = {
 };
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>({
     learningGoal: '',
@@ -49,9 +52,8 @@ export default function OnboardingPage() {
 
   const handleComplete = () => {
     console.log('[v0] Onboarding completed with data:', data);
-    // In production, send this data to your backend
-    // Then redirect to dashboard or main app
-    window.location.href = '/';
+    toast.success('Setup complete! Let\'s start learning.');
+    router.push('/dashboard');
   };
 
   const progressPercentage = (currentStep / 3) * 100;
