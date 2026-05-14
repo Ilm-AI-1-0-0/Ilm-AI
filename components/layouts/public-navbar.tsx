@@ -42,12 +42,12 @@ export function PublicNavbar() {
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/auth">
+            <Link href="/auth/login">
               <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/10">
                 Sign In
               </Button>
             </Link>
-            <Link href="/auth">
+            <Link href="/auth/register">
               <Button className="bg-purple-600 hover:bg-purple-700 text-white">
                 Get Started
               </Button>
@@ -85,12 +85,12 @@ export function PublicNavbar() {
                 </a>
               ))}
               <div className="pt-4 border-t border-gray-800 space-y-3">
-                <Link href="/auth" className="block">
+                <Link href="/auth/login" className="block">
                   <Button variant="outline" className="w-full border-gray-700 text-gray-300">
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/auth" className="block">
+                <Link href="/auth/register" className="block">
                   <Button className="w-full bg-purple-600 hover:bg-purple-700">
                     Get Started
                   </Button>

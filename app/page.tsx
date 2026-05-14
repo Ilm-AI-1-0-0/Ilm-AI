@@ -38,7 +38,7 @@ export default function Home() {
             <p className="text-xl text-gray-400 mb-8">
               Join thousands of learners mastering new skills with Ilm AI. Start learning smarter, not harder.
             </p>
-            <Link href="/auth">
+            <Link href="/auth/register">
               <button className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-semibold py-4 px-8 rounded-lg inline-flex items-center gap-2 transition-all duration-300 hover:scale-105">
                 Get Started Free Today
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

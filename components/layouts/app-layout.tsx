@@ -7,12 +7,13 @@ import { AppSidebar } from './app-sidebar';
 interface AppLayoutProps {
   children: ReactNode;
   userName?: string;
+  currentStreak?: number;
 }
 
-export function AppLayout({ children, userName = 'User' }: AppLayoutProps) {
+export function AppLayout({ children, userName = 'User', currentStreak = 5 }: AppLayoutProps) {
   return (
     <div className="flex min-h-screen bg-background">
-      <AppSidebar userName={userName} />
+      <AppSidebar userName={userName} currentStreak={currentStreak} />
       <motion.main
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

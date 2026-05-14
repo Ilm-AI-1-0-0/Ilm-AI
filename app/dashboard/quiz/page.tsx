@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/dashboard/sidebar';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { AppLayout } from '@/components/layouts/app-layout';
 import QuizSetup from '@/components/quiz/quiz-setup';
 import QuizQuestion, { type Question } from '@/components/quiz/quiz-question';
 import QuizResults from '@/components/quiz/quiz-results';
 import ReviewMissed from '@/components/quiz/review-missed';
-import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { Progress } from '@/components/ui/progress';
+import { toast } from 'sonner';
 
 // Mock materials - replace with real data
 const mockMaterials = [
@@ -150,12 +153,12 @@ const mockQuestions: Question[] = [
     type: 'multiple-choice',
     options: [
       'Room temperature',
-      'Freezing point of water (0°C)',
-      'Near absolute zero (around -273°C)',
-      'Boiling point of nitrogen (-196°C)',
+      'Freezing point of water (0 degrees C)',
+      'Near absolute zero (around -273 degrees C)',
+      'Boiling point of nitrogen (-196 degrees C)',
     ],
     correctAnswer: 2,
-    explanation: 'Superconducting quantum computers operate near absolute zero (about 15 millikelvin, or -273.135°C). This extreme cold is necessary to minimize thermal noise and maintain the quantum coherence of the superconducting qubits.',
+    explanation: 'Superconducting quantum computers operate near absolute zero (about 15 millikelvin, or -273.135 degrees C). This extreme cold is necessary to minimize thermal noise and maintain the quantum coherence of the superconducting qubits.',
     source: 'Introduction to Quantum Computing, Chapter 5',
   },
   {
@@ -190,12 +193,55 @@ interface Answer {
 
 export default function QuizPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [quizState, setQuizState] = useState<QuizState>('setup');
   const [quizConfig, setQuizConfig] = useState<QuizConfig | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [score, setScore] = useState(0);
+
+  // Check for focus=weak in URL params
+  useEffect(() => {
+    const focus = searchParams.get('focus');
+    if (focus === 'weak') {
+      toast.info('Starting quiz focused on weak topics');
+    }
+  }, [searchParams]);
+
+  const triggerConfetti = useCallback(() => {
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+    const randomInRange = (min: number, max: number) =>
+      Math.random() * (max - min) + min;
+
+    const interval = setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50 * (timeLeft / duration);
+
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+        colors: ['#7C3AED', '#06B6D4', '#10B981', '#F59E0B', '#EF4444'],
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+        colors: ['#7C3AED', '#06B6D4', '#10B981', '#F59E0B', '#EF4444'],
+      });
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleStartQuiz = useCallback((config: QuizConfig) => {
     setQuizConfig(config);
@@ -223,9 +269,19 @@ export default function QuizPage() {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
     } else {
+      // Quiz complete
+      const finalScore = score + (answers[answers.length - 1]?.isCorrect ? 0 : 0);
+      const percentage = Math.round(((finalScore + (answers.length > 0 && answers[answers.length - 1]?.isCorrect ? 0 : 0)) / questions.length) * 100);
+      
+      // Trigger confetti for scores >= 80%
+      if (percentage >= 80) {
+        triggerConfetti();
+      }
+      
       setQuizState('results');
+      toast.success('Quiz completed!');
     }
-  }, [currentQuestionIndex, questions.length]);
+  }, [currentQuestionIndex, questions.length, score, answers, triggerConfetti]);
 
   const handleReviewMissed = useCallback(() => {
     setQuizState('review');
@@ -250,89 +306,115 @@ export default function QuizPage() {
 
   const missedAnswers = answers.filter((a) => !a.isCorrect);
 
-  return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar />
+  // Calculate progress
+  const progressPercentage = questions.length > 0 
+    ? ((currentQuestionIndex + 1) / questions.length) * 100 
+    : 0;
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 lg:pb-8">
-          {/* Page Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-4 mb-2">
-              {quizState !== 'setup' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (quizState === 'quiz') {
-                      // Confirm before leaving quiz
-                      if (window.confirm('Are you sure you want to leave? Your progress will be lost.')) {
-                        setQuizState('setup');
-                      }
-                    } else if (quizState === 'review') {
-                      setQuizState('results');
-                    } else {
+  return (
+    <AppLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-24 lg:pb-8">
+        {/* Page Header */}
+        <div className="mb-6 lg:mb-8">
+          <div className="flex items-center gap-4 mb-2">
+            {quizState !== 'setup' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (quizState === 'quiz') {
+                    // Confirm before leaving quiz
+                    if (window.confirm('Are you sure you want to leave? Your progress will be lost.')) {
                       setQuizState('setup');
                     }
-                  }}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <ArrowLeft size={20} />
-                </Button>
-              )}
-              <div>
-                <h1 className="text-3xl lg:text-4xl font-bold text-white">
-                  {quizState === 'setup' && 'Quiz Mode'}
-                  {quizState === 'quiz' && 'Quiz in Progress'}
-                  {quizState === 'results' && 'Quiz Results'}
-                  {quizState === 'review' && 'Review Questions'}
-                </h1>
-                <p className="text-gray-400">
-                  {quizState === 'setup' && 'Test your knowledge with personalized quizzes'}
-                  {quizState === 'quiz' && 'Take your time and think carefully'}
-                  {quizState === 'results' && 'See how you performed'}
-                  {quizState === 'review' && 'Learn from your mistakes'}
-                </p>
-              </div>
-            </div>
+                  } else if (quizState === 'review') {
+                    setQuizState('results');
+                  } else {
+                    setQuizState('setup');
+                  }
+                }}
+                className="text-gray-400 hover:text-white"
+              >
+                <ArrowLeft size={20} />
+              </Button>
+            )}
+            {quizState === 'setup' && (
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft size={16} />
+                Back to Dashboard
+              </Link>
+            )}
           </div>
-
-          {/* Quiz Content */}
-          {quizState === 'setup' && (
-            <QuizSetup materials={mockMaterials} onStartQuiz={handleStartQuiz} />
-          )}
-
-          {quizState === 'quiz' && questions.length > 0 && (
-            <QuizQuestion
-              question={questions[currentQuestionIndex]}
-              questionNumber={currentQuestionIndex + 1}
-              totalQuestions={questions.length}
-              onAnswer={handleAnswer}
-              onNext={handleNext}
-            />
-          )}
-
-          {quizState === 'results' && (
-            <QuizResults
-              score={score}
-              totalQuestions={questions.length}
-              answers={answers}
-              onReviewMissed={handleReviewMissed}
-              onRetakeQuiz={handleRetakeQuiz}
-              onBackToDashboard={handleBackToDashboard}
-            />
-          )}
-
-          {quizState === 'review' && (
-            <ReviewMissed
-              missedAnswers={missedAnswers}
-              onBack={handleBackToResults}
-            />
-          )}
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white">
+              {quizState === 'setup' && 'Quiz Mode'}
+              {quizState === 'quiz' && 'Quiz in Progress'}
+              {quizState === 'results' && 'Quiz Results'}
+              {quizState === 'review' && 'Review Questions'}
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">
+              {quizState === 'setup' && 'Test your knowledge with personalized quizzes'}
+              {quizState === 'quiz' && 'Take your time and think carefully'}
+              {quizState === 'results' && 'See how you performed'}
+              {quizState === 'review' && 'Learn from your mistakes'}
+            </p>
+          </div>
         </div>
-      </main>
-    </div>
+
+        {/* Progress Bar for Quiz State */}
+        {quizState === 'quiz' && questions.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-gray-400">
+                Question {currentQuestionIndex + 1} of {questions.length}
+              </span>
+              <span className="text-sm font-medium text-purple-400">
+                {Math.round(progressPercentage)}%
+              </span>
+            </div>
+            <Progress 
+              value={progressPercentage} 
+              className="h-2 bg-[#1F2937]"
+            />
+          </div>
+        )}
+
+        {/* Quiz Content */}
+        {quizState === 'setup' && (
+          <QuizSetup materials={mockMaterials} onStartQuiz={handleStartQuiz} />
+        )}
+
+        {quizState === 'quiz' && questions.length > 0 && (
+          <QuizQuestion
+            question={questions[currentQuestionIndex]}
+            questionNumber={currentQuestionIndex + 1}
+            totalQuestions={questions.length}
+            onAnswer={handleAnswer}
+            onNext={handleNext}
+          />
+        )}
+
+        {quizState === 'results' && (
+          <QuizResults
+            score={score}
+            totalQuestions={questions.length}
+            answers={answers}
+            onReviewMissed={handleReviewMissed}
+            onRetakeQuiz={handleRetakeQuiz}
+            onBackToDashboard={handleBackToDashboard}
+          />
+        )}
+
+        {quizState === 'review' && (
+          <ReviewMissed
+            missedAnswers={missedAnswers}
+            onBack={handleBackToResults}
+          />
+        )}
+      </div>
+    </AppLayout>
   );
 }

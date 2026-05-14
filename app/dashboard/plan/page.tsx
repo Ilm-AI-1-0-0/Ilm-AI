@@ -2,16 +2,18 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { ChartNoAxesCombined } from 'lucide-react';
-import Sidebar from '@/components/dashboard/sidebar';
+import { ChartNoAxesCombined, ArrowLeft } from 'lucide-react';
+import { AppLayout } from '@/components/layouts/app-layout';
 import GoalBanner from '@/components/plan/goal-banner';
 import WeeklyCalendar from '@/components/plan/weekly-calendar';
 import DailyPlanCard from '@/components/plan/daily-plan-card';
 import ProgressSidebar from '@/components/plan/progress-sidebar';
 import EmptyState from '@/components/plan/empty-state';
 import GoalModal from '@/components/plan/goal-modal';
+import { toast } from 'sonner';
 
 // Mock data - replace with real data from backend
 const mockGoal = {
@@ -166,6 +168,11 @@ export default function LearningPlanPage() {
         i === index ? { ...plan, isCompleted: !plan.isCompleted } : plan
       )
     );
+    
+    const plan = dailyPlans[index];
+    if (!plan.isCompleted) {
+      toast.success(`${plan.dayLabel} marked as complete!`);
+    }
   };
 
   const handleStartSession = () => {
@@ -175,6 +182,7 @@ export default function LearningPlanPage() {
   const handleSaveGoal = (newGoal: { title: string; deadline: string }) => {
     setGoal(newGoal);
     setHasGoal(true);
+    toast.success('Learning goal updated!');
   };
 
   const sidebarContent = (
@@ -191,95 +199,100 @@ export default function LearningPlanPage() {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-background">
-      <Sidebar />
+    <AppLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-24 lg:pb-8">
+        {/* Back link */}
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors mb-4"
+        >
+          <ArrowLeft size={16} />
+          Back to Dashboard
+        </Link>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 lg:pb-8">
-          {/* Page Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                My Learning Plan
-              </h1>
-              <p className="text-gray-400">
-                Your personalized study schedule
-              </p>
-            </div>
-
-            {/* Mobile Progress Sheet Trigger */}
-            {hasGoal && (
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="lg:hidden bg-purple-500/10 border-purple-500/30 text-purple-400"
-                  >
-                    <ChartNoAxesCombined size={20} />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="bg-[#0A0F1E] border-[#1F2937] h-[80vh] overflow-y-auto">
-                  <div className="pt-4">
-                    {sidebarContent}
-                  </div>
-                </SheetContent>
-              </Sheet>
-            )}
+        {/* Page Header */}
+        <div className="flex items-center justify-between mb-6 lg:mb-8">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white">
+              My Learning Plan
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">
+              Your personalized study schedule
+            </p>
           </div>
 
-          {!hasGoal ? (
-            <EmptyState onSetGoal={() => setIsModalOpen(true)} />
-          ) : (
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Main Content */}
-              <div className="flex-1 space-y-6">
-                {/* Goal Banner */}
-                <GoalBanner
-                  goalTitle={goal.title}
-                  daysLeft={daysLeft}
-                  onEdit={() => setIsModalOpen(true)}
-                />
-
-                {/* Weekly Calendar */}
-                <WeeklyCalendar
-                  days={weekDays}
-                  selectedDay={selectedDayIndex}
-                  onSelectDay={setSelectedDayIndex}
-                  onPreviousWeek={() => setWeekOffset((prev) => prev - 1)}
-                  onNextWeek={() => setWeekOffset((prev) => prev + 1)}
-                  weekLabel={weekLabel}
-                />
-
-                {/* Daily Plan Cards */}
-                <div className="space-y-4">
-                  <h2 className="text-white font-bold text-lg">Daily Schedule</h2>
-                  {dailyPlans.map((plan, index) => (
-                    <DailyPlanCard
-                      key={plan.id}
-                      dayLabel={plan.dayLabel}
-                      date={plan.date}
-                      materials={plan.materials}
-                      topics={plan.topics}
-                      isCompleted={plan.isCompleted}
-                      isToday={plan.isToday}
-                      onToggleComplete={() => handleToggleComplete(index)}
-                      onStartSession={handleStartSession}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Desktop Sidebar */}
-              <aside className="hidden lg:block w-80 flex-shrink-0">
-                <div className="sticky top-8">
+          {/* Mobile Progress Sheet Trigger */}
+          {hasGoal && (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="lg:hidden bg-purple-500/10 border-purple-500/30 text-purple-400"
+                >
+                  <ChartNoAxesCombined size={20} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="bg-[#0A0F1E] border-[#1F2937] h-[80vh] overflow-y-auto">
+                <div className="pt-4">
                   {sidebarContent}
                 </div>
-              </aside>
-            </div>
+              </SheetContent>
+            </Sheet>
           )}
         </div>
-      </main>
+
+        {!hasGoal ? (
+          <EmptyState onSetGoal={() => setIsModalOpen(true)} />
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Main Content */}
+            <div className="flex-1 space-y-6">
+              {/* Goal Banner */}
+              <GoalBanner
+                goalTitle={goal.title}
+                daysLeft={daysLeft}
+                onEdit={() => setIsModalOpen(true)}
+              />
+
+              {/* Weekly Calendar */}
+              <WeeklyCalendar
+                days={weekDays}
+                selectedDay={selectedDayIndex}
+                onSelectDay={setSelectedDayIndex}
+                onPreviousWeek={() => setWeekOffset((prev) => prev - 1)}
+                onNextWeek={() => setWeekOffset((prev) => prev + 1)}
+                weekLabel={weekLabel}
+              />
+
+              {/* Daily Plan Cards */}
+              <div className="space-y-4">
+                <h2 className="text-white font-bold text-lg">Daily Schedule</h2>
+                {dailyPlans.map((plan, index) => (
+                  <DailyPlanCard
+                    key={plan.id}
+                    dayLabel={plan.dayLabel}
+                    date={plan.date}
+                    materials={plan.materials}
+                    topics={plan.topics}
+                    isCompleted={plan.isCompleted}
+                    isToday={plan.isToday}
+                    onToggleComplete={() => handleToggleComplete(index)}
+                    onStartSession={handleStartSession}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop Sidebar */}
+            <aside className="hidden lg:block w-80 flex-shrink-0">
+              <div className="sticky top-8">
+                {sidebarContent}
+              </div>
+            </aside>
+          </div>
+        )}
+      </div>
 
       {/* Goal Modal */}
       <GoalModal
@@ -288,6 +301,6 @@ export default function LearningPlanPage() {
         onSave={handleSaveGoal}
         initialGoal={hasGoal ? goal : undefined}
       />
-    </div>
+    </AppLayout>
   );
 }

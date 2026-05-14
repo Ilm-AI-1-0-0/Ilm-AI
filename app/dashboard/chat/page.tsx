@@ -1,11 +1,27 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { AppLayout } from '@/components/layouts/app-layout';
 import { MaterialsPanel } from '@/components/chat/materials-panel';
 import { ChatHeader } from '@/components/chat/chat-header';
 import { ChatMessage, TypingIndicator } from '@/components/chat/chat-message';
 import { ChatInput } from '@/components/chat/chat-input';
 import { ChatEmptyState } from '@/components/chat/empty-state';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface Message {
   id: string;
@@ -119,6 +135,12 @@ export default function ChatPage() {
   }, [messages, isLoading]);
 
   const handleSendMessage = async (content: string) => {
+    // Check if materials are selected
+    if (selectedMaterials.length === 0) {
+      toast.error('Please select at least one material to chat with');
+      return;
+    }
+
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -171,50 +193,127 @@ export default function ChatPage() {
     }, 1000);
   };
 
+  const handleNewConversation = () => {
+    setMessages([]);
+    toast.success('Started a new conversation');
+  };
+
+  const handleClearConversation = () => {
+    setMessages([]);
+    toast.success('Conversation cleared');
+  };
+
   return (
-    <div className="flex h-screen bg-background">
-      {/* Materials Panel - Desktop only */}
-      <MaterialsPanel
-        materials={MOCK_MATERIALS}
-        selectedMaterials={selectedMaterials}
-        onSelectionChange={setSelectedMaterials}
-      />
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <ChatHeader
-          sessionName="Architecture Discussion"
-          materialCount={MOCK_MATERIALS.length}
+    <AppLayout>
+      <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen bg-background">
+        {/* Materials Panel - Desktop only */}
+        <MaterialsPanel
+          materials={MOCK_MATERIALS}
+          selectedMaterials={selectedMaterials}
+          onSelectionChange={setSelectedMaterials}
         />
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
-          {messages.length === 0 ? (
-            <ChatEmptyState />
-          ) : (
-            <>
-              {messages.map((message) => (
-                <ChatMessage
-                  key={message.id}
-                  type={message.type}
-                  content={message.content}
-                  citations={message.citations}
-                />
-              ))}
-              {isLoading && <TypingIndicator />}
-              <div ref={messagesEndRef} />
-            </>
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header with back button */}
+          <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-[#1F2937] bg-[#111827]/50">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard"
+                className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-[#1F2937] text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft size={20} />
+              </Link>
+              <div>
+                <h2 className="text-white font-semibold">AI Chat Companion</h2>
+                <p className="text-xs text-gray-400">
+                  {selectedMaterials.length} material{selectedMaterials.length !== 1 ? 's' : ''} selected
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNewConversation}
+                className="gap-2 border-gray-700 text-gray-300 hover:text-white"
+              >
+                <Plus size={16} />
+                <span className="hidden sm:inline">New Chat</span>
+              </Button>
+              {messages.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-gray-700 text-gray-300 hover:text-red-400 hover:border-red-500/50"
+                    >
+                      <Trash2 size={16} />
+                      <span className="hidden sm:inline">Clear</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-[#111827] border-[#1F2937]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-white">Clear conversation?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-gray-400">
+                        This will delete all messages in this conversation. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="bg-[#1F2937] border-gray-700 text-gray-300 hover:text-white">
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleClearConversation}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        Clear
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+          </div>
+
+          {/* No material warning */}
+          {selectedMaterials.length === 0 && (
+            <div className="px-4 md:px-6 py-3 bg-amber-500/10 border-b border-amber-500/30">
+              <p className="text-sm text-amber-300">
+                No materials selected. Select at least one material from the sidebar to start chatting.
+              </p>
+            </div>
           )}
-        </div>
 
-        {/* Input Area */}
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          isLoading={isLoading}
-          selectedMaterialsCount={selectedMaterials.length}
-        />
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+            {messages.length === 0 ? (
+              <ChatEmptyState />
+            ) : (
+              <>
+                {messages.map((message) => (
+                  <ChatMessage
+                    key={message.id}
+                    type={message.type}
+                    content={message.content}
+                    citations={message.citations}
+                  />
+                ))}
+                {isLoading && <TypingIndicator />}
+                <div ref={messagesEndRef} />
+              </>
+            )}
+          </div>
+
+          {/* Input Area */}
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            isLoading={isLoading}
+            selectedMaterialsCount={selectedMaterials.length}
+          />
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
