@@ -9,6 +9,9 @@ import QuickActions from '@/components/dashboard/quick-actions';
 import RecentMaterials from '@/components/dashboard/recent-materials';
 import StreakCard from '@/components/dashboard/streak-card';
 import KnowledgeGaps from '@/components/dashboard/knowledge-gaps';
+import { UsageAlertBanner } from '@/components/paywall/usage-alert-banner';
+import { PaywallModal } from '@/components/paywall/paywall-modal';
+import { useUsageContext } from '@/components/providers/usage-provider';
 import { BookOpen, MessageCircle, Brain, Target, Flame, Calendar } from 'lucide-react';
 
 // Mock data - replace with real data from your backend
@@ -149,6 +152,8 @@ function GoalProgressBanner() {
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const { limits } = useUsageContext();
 
   useEffect(() => {
     // Simulate loading data
@@ -167,6 +172,12 @@ export default function Dashboard() {
           <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1">Dashboard</h1>
           <p className="text-gray-400 text-sm">Track your progress and continue learning</p>
         </div>
+
+        {/* Usage Alert Banner */}
+        <UsageAlertBanner
+          limits={limits}
+          onUpgradeClick={() => setPaywallOpen(true)}
+        />
 
         {isLoading ? (
           <div className="space-y-6 animate-fade-in">
@@ -222,6 +233,13 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        isOpen={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        triggerType="quiz"
+      />
     </AppLayout>
   );
 }
